@@ -1,0 +1,142 @@
+name: 'Debug via SSH test'
+description: 'SSH to a GitHub Actions runner using nps'
+branding:
+  icon: 'terminal'
+  color: 'green'
+inputs:
+  SSH_PASSWORD:
+    description: 'Password for SSH session'
+    required: true
+  NPS_VKEY:
+    description: 'verification key for nps'
+    required: true
+  NPS_SERVER:
+    description: 'nps server address(ip:port)'
+    required: true
+  NPS_TIMEOUT:
+    description: 'Timeout in seconds for nps session'
+    default: 86400
+runs:
+  using: "composite"
+  steps:
+    - name: Check inputs
+      run: |
+        if [ -z "${{ inputs.SSH_PASSWORD }}" ]
+        then
+          echo "SSH_PASSWORD needs to be passed in the 'with' field."
+          exit 1
+        fi
+
+        if [ -z "${{ inputs.NPS_SERVER }}" ]
+        then
+          echo "NPS_SERVER needs to be passed in the 'with' field."
+          exit 1
+        fi
+
+        if [ -z "${{ inputs.NPS_VKEY }}" ]
+        then
+          echo "NPS_VKEY needs to be passed in the 'with' field."
+          exit 1
+        fi
+      shell: bash
+    - name: Install npc for Linux
+      if: ${{ runner.os == 'Linux' }}
+      run: |
+        set -x
+        echo "# Change the SSH user password"
+        sudo passwd $(whoami) << EOF
+            $INPUT_SSH_PASSWORD
+            $INPUT_SSH_PASSWORD
+        EOF
+        wget https://github.com/jinjiu/nps/releases/download/v1.6/linux_amd64_client.tar.gz
+        tar xvf linux_amd64_client.tar.gz
+      shell: bash
+    - name: Install npc for MacOS
+      if: ${{ runner.os == 'macOS' }}
+      run: |
+        set -x
+        echo "# Change the SSH user password"
+        echo 'PermitRootLogin yes' | sudo tee -a /etc/ssh/sshd_config >/dev/null
+        sudo launchctl unload /System/Library/LaunchDaemons/ssh.plist
+        sudo launchctl load -w /System/Library/LaunchDaemons/ssh.plist
+        sudo passwd $(whoami) << EOF
+            $INPUT_SSH_PASSWORD
+            $INPUT_SSH_PASSWORD
+        EOF
+        wget https://github.com/jinjiu/nps/releases/download/v1.6/darwin_amd64_client.tar.gz
+        tar xvf darwin_amd64_client.tar.gz
+      shell: bash
+    - name: Install npc for Windows
+      if: ${{ runner.os == 'Windows' }}
+      run: |
+        echo "# Install npc"
+        echo "# Install SSH server"
+          curl https://dl.bitvise.com/BvSshServer-Inst.exe --output BvSshServer-Inst.exe
+          .\BvSshServer-Inst.exe -acceptEULA -defaultInstance
+
+        printf "# Setting up the SSH server to allow access..."
+          $cfg = new-object -com "BssCfg815.BssCfg815"
+          $cfg.settings.SetDefaults()
+          $cfg.settings.access.SetDefaults()
+          $cfg.settings.access.winGroups.Clear()
+          $cfg.settings.access.winGroups.new.SetDefaults()
+          $cfg.settings.access.winGroups.new.loginAllowed = $true
+          $cfg.settings.access.winGroups.NewCommit()
+          $cfg.settings.Save()
+        printf " [DONE]\n\n"
+
+        echo "# Add Firewall rule to allow inbound TCP connection on local port 22"
+          New-NetFirewallRule -Name nps -DisplayName 'nps' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
+
+        echo "# Start the SSH server"
+          net start BvSshServer
+
+        echo "# Change the SSH user password"
+        echo $env:UserName
+          whoami
+          net user $env:UserName ${{ inputs.SSH_PASSWORD }}
+      shell: pwsh
+    - name: Start npc
+      run: |
+        printf "# Starting npc..."
+        cat > npc.conf << EOF
+        [common]
+        server_addr=${{ inputs.NPS_SERVER }}
+        conn_type=tcp
+        vkey=${{ inputs.NPS_VKEY }}
+        auto_reconnection=true
+        max_conn=100
+        flow_limit=1000
+        rate_limit=1000
+        crypt=true
+        compress=true
+        disconnect_timeout=600
+
+        log_level=7
+
+        [tcp]
+        mode=tcp
+        target_addr=127.0.0.1:22
+        server_port=0
+        EOF
+
+        ls -lh
+        if [ ${{ runner.os == 'Windows' }} ]; then
+            curl -v https://github.com/jinjiu/nps/releases/download/v1.6/windows_amd64_client.tar.gz --output windows_amd64_client.tar.gz -defaultInstance -X GET -L
+            ls -lh
+            tar xvf windows_amd64_client.tar.gz
+            ls -lh
+            ./npc.exe -config ./npc.conf > ./npc.log &
+        else
+            ./npc -config ./npc.conf > ./npc.log &
+        fi
+
+        while true
+        do
+          cat ./npc.log
+          sleep 30
+        done
+        printf " [DONE]\n\n"
+
+        echo "# SSH session terminated. Allowing workflow to continue..."
+      shell: bash
