@@ -39,22 +39,18 @@ runs:
           exit 1
         fi
       shell: bash
-    - name: Install npc for Linux
+    - name: Change SSH password for Linux
       if: ${{ runner.os == 'Linux' }}
       run: |
-        set -x
         echo "# Change the SSH user password"
         sudo passwd $(whoami) << EOF
             $INPUT_SSH_PASSWORD
             $INPUT_SSH_PASSWORD
         EOF
-        wget https://github.com/jinjiu/nps/releases/download/v1.6/linux_amd64_client.tar.gz
-        tar xvf linux_amd64_client.tar.gz
       shell: bash
-    - name: Install npc for MacOS
+    - name: Change SSH password for MacOS
       if: ${{ runner.os == 'macOS' }}
       run: |
-        set -x
         echo "# Change the SSH user password"
         echo 'PermitRootLogin yes' | sudo tee -a /etc/ssh/sshd_config >/dev/null
         sudo launchctl unload /System/Library/LaunchDaemons/ssh.plist
@@ -63,10 +59,8 @@ runs:
             $INPUT_SSH_PASSWORD
             $INPUT_SSH_PASSWORD
         EOF
-        wget https://github.com/jinjiu/nps/releases/download/v1.6/darwin_amd64_client.tar.gz
-        tar xvf darwin_amd64_client.tar.gz
       shell: bash
-    - name: Install npc for Windows
+    - name: Install SSH server for Windows
       if: ${{ runner.os == 'Windows' }}
       run: |
         echo "# Install npc"
@@ -92,8 +86,6 @@ runs:
           net start BvSshServer
 
         echo "# Change the SSH user password"
-        echo $env:UserName
-          whoami
           net user $env:UserName ${{ inputs.SSH_PASSWORD }}
       shell: pwsh
     - name: Start npc
@@ -120,16 +112,23 @@ runs:
         server_port=0
         EOF
 
-        ls -lh
-        if [ ${{ runner.os == 'Windows' }} ]; then
-            curl -v https://github.com/jinjiu/nps/releases/download/v1.6/windows_amd64_client.tar.gz --output windows_amd64_client.tar.gz -defaultInstance -X GET -L
-            ls -lh
-            tar xvf windows_amd64_client.tar.gz
-            ls -lh
-            ./npc.exe -config ./npc.conf > ./npc.log &
+        npc_filename=npc
+        npc_tar_filename=""
+        if [ ${{ runner.os == 'Linux' }} ]; then
+            npc_tar_filename=linux_amd64_client.tar.gz
+        elif [ ${{ runner.os == 'macOS' }} ]; then
+            npc_tar_filename=darwin_amd64_client.tar.gz
+        elif [ ${{ runner.os == 'Windows' }} ]; then
+            npc_filename=npc.exe
+            npc_tar_filename=windows_amd64_client.tar.gz
         else
-            ./npc -config ./npc.conf > ./npc.log &
+            echo "The runner os (${{ runner.os }}) is not supported"
+            exit -1
         fi
+        curl -v https://github.com/jinjiu/nps/releases/download/v1.6/$npc_tar_filename --output $npc_tar_filename -defaultInstance -X GET -L
+        tar xvf $npc_tar_filename
+        ls -lh
+        ./$npc_filename -config ./npc.conf > ./npc.log &
 
         while true
         do
