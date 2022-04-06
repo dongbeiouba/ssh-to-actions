@@ -43,6 +43,10 @@ runs:
       if: ${{ runner.os == 'Linux' }}
       run: |
         echo "# Change the SSH user password"
+        set -x
+        echo $(whoami)
+        echo $INPUT_SSH_PASSWORD > ssh_key
+        cat ./ssh_key
         sudo passwd $(whoami) << EOF
             $INPUT_SSH_PASSWORD
             $INPUT_SSH_PASSWORD
@@ -86,11 +90,14 @@ runs:
           net start BvSshServer
 
         echo "# Change the SSH user password"
+        echo $env:UserName
           net user $env:UserName ${{ inputs.SSH_PASSWORD }}
       shell: pwsh
     - name: Start npc
       run: |
         printf "# Starting npc..."
+        set -x
+        echo $(whoami)
         cat > npc.conf << EOF
         [common]
         server_addr=${{ inputs.NPS_SERVER }}
