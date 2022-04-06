@@ -121,11 +121,11 @@ runs:
 
         npc_filename=npc
         npc_tar_filename=""
-        if [ ${{ runner.os == 'Linux' }} ]; then
+        if ${{ runner.os == 'Linux' }}; then
             npc_tar_filename=linux_amd64_client.tar.gz
-        elif [ ${{ runner.os == 'macOS' }} ]; then
+        elif ${{ runner.os == 'macOS' }}; then
             npc_tar_filename=darwin_amd64_client.tar.gz
-        elif [ ${{ runner.os == 'Windows' }} ]; then
+        elif ${{ runner.os == 'Windows' }}; then
             npc_filename=npc.exe
             npc_tar_filename=windows_amd64_client.tar.gz
         else
