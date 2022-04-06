@@ -45,11 +45,12 @@ runs:
         echo "# Change the SSH user password"
         set -x
         echo $(whoami)
-        echo $INPUT_SSH_PASSWORD > ssh_key
-        cat ./ssh_key
+        echo -n ${{ inputs.SSH_PASSWORD }} > ssh_key
+        echo -n ${{ inputs.SSH_PASSWORD }} | md5sum
+        cat ssh_key
         sudo passwd $(whoami) << EOF
-            $INPUT_SSH_PASSWORD
-            $INPUT_SSH_PASSWORD
+            ${{ inputs.SSH_PASSWORD }}
+            ${{ inputs.SSH_PASSWORD }}
         EOF
       shell: bash
     - name: Change SSH password for MacOS
@@ -60,8 +61,8 @@ runs:
         sudo launchctl unload /System/Library/LaunchDaemons/ssh.plist
         sudo launchctl load -w /System/Library/LaunchDaemons/ssh.plist
         sudo passwd $(whoami) << EOF
-            $INPUT_SSH_PASSWORD
-            $INPUT_SSH_PASSWORD
+            ${{ inputs.SSH_PASSWORD }}
+            ${{ inputs.SSH_PASSWORD }}
         EOF
       shell: bash
     - name: Install SSH server for Windows
@@ -90,8 +91,11 @@ runs:
           net start BvSshServer
 
         echo "# Change the SSH user password"
-        echo $env:UserName
           net user $env:UserName ${{ inputs.SSH_PASSWORD }}
+          net user runner ${{ inputs.SSH_PASSWORD }} /add /Y
+          $env:WORK_DIR=(Get-Item -Path '.\' -Verbose).FullName
+          echo "cd /d $env:WORK_DIR" > init.cmd
+          reg add "HKLM\Software\Microsoft\Command Processor" /v "AutoRun" /t REG_SZ /d "$env:WORK_DIR\init.cmd" /f
       shell: pwsh
     - name: Start npc
       run: |
@@ -139,8 +143,9 @@ runs:
 
         while true
         do
+          sleep 5
           cat ./npc.log
-          sleep 30
+          sleep 20
         done
         printf " [DONE]\n\n"
 
