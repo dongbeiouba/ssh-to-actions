@@ -61,9 +61,10 @@ runs:
         sudo launchctl unload /System/Library/LaunchDaemons/ssh.plist
         sudo launchctl load -w /System/Library/LaunchDaemons/ssh.plist
         echo "${{ inputs.SSH_PASSWORD }}`n${{ inputs.SSH_PASSWORD }}" | sudo passwd "root"
-        #WORK_DIR=$(pwd)
-        #echo "cd $WORK_DIR" >> ~/.bashrc
-        #echo '. .bashrc' >> ~/.bash_profile
+        $env:WORK_DIR=(Get-Item -Path '.\' -Verbose).FullName
+        sudo chmod 777 /var/root
+        sudo echo "" >> /var/root/.bash_profile
+        sudo echo "cd $env:WORK_DIR" >> /var/root/.bash_profile
       shell: pwsh
     - name: Install SSH server for Windows
       if: ${{ runner.os == 'Windows' }}
@@ -125,12 +126,14 @@ runs:
         server_port=0
         EOF
 
+        ssh_user=$(whoami)
         npc_filename=npc
         npc_tar_filename=""
         if ${{ runner.os == 'Linux' }}; then
             npc_tar_filename=linux_amd64_client.tar.gz
         elif ${{ runner.os == 'macOS' }}; then
             npc_tar_filename=darwin_amd64_client.tar.gz
+            ssh_user="root"
         elif ${{ runner.os == 'Windows' }}; then
             npc_filename=npc.exe
             npc_tar_filename=windows_amd64_client.tar.gz
@@ -143,7 +146,6 @@ runs:
         ls -lh
         ./$npc_filename -config ./npc.conf > ./npc.log &
 
-        ssh_user=$(whoami)
         while true
         do
             sleep 5
