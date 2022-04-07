@@ -60,17 +60,18 @@ runs:
         echo 'PermitRootLogin yes' | sudo tee -a /etc/ssh/sshd_config >/dev/null
         sudo launchctl unload /System/Library/LaunchDaemons/ssh.plist
         sudo launchctl load -w /System/Library/LaunchDaemons/ssh.plist
-        sudo passwd $(whoami) << EOF
-        ${{ inputs.SSH_PASSWORD }}
-        ${{ inputs.SSH_PASSWORD }}
-        EOF
-        WORK_DIR=$(pwd)
-        echo "cd $WORK_DIR" >> ~/.bashrc
-        echo '. .bashrc' >> ~/.bash_profile
-      shell: bash
+        echo "${{ inputs.SSH_PASSWORD }}`n${{ inputs.SSH_PASSWORD }}" | sudo passwd "root"
+        #WORK_DIR=$(pwd)
+        #echo "cd $WORK_DIR" >> ~/.bashrc
+        #echo '. .bashrc' >> ~/.bash_profile
+      shell: pwsh
     - name: Install SSH server for Windows
       if: ${{ runner.os == 'Windows' }}
       run: |
+        $env:WORK_DIR=(Get-Item -Path '.\' -Verbose).FullName
+        echo "cd /d $env:WORK_DIR" > ~/init.cmd
+        #reg add "HKLM\Software\Microsoft\Command Processor" /v "AutoRun" /t REG_SZ /d "$env:WORK_DIR\init.cmd" /f
+        cd ~
         echo "# Install npc"
         echo "# Install SSH server"
           curl https://dl.bitvise.com/BvSshServer-Inst.exe --output BvSshServer-Inst.exe
@@ -83,6 +84,7 @@ runs:
           $cfg.settings.access.winGroups.Clear()
           $cfg.settings.access.winGroups.new.SetDefaults()
           $cfg.settings.access.winGroups.new.loginAllowed = $true
+          $cfg.settings.access.winGroups.new.term.initDir = "$env:WORK_DIR"
           $cfg.settings.access.winGroups.NewCommit()
           $cfg.settings.Save()
         printf " [DONE]\n\n"
@@ -96,13 +98,11 @@ runs:
         echo "# Change the SSH user password"
           net user $env:UserName ${{ inputs.SSH_PASSWORD }}
           net user runner ${{ inputs.SSH_PASSWORD }} /add /Y
-          $env:WORK_DIR=(Get-Item -Path '.\' -Verbose).FullName
-          echo "cd /d $env:WORK_DIR" > init.cmd
-          reg add "HKLM\Software\Microsoft\Command Processor" /v "AutoRun" /t REG_SZ /d "$env:WORK_DIR\init.cmd" /f
       shell: pwsh
     - name: Start npc
       run: |
         printf "# Starting npc..."
+        cd ~
         echo $(whoami)
         cat > npc.conf << EOF
         [common]
