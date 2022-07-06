@@ -130,7 +130,13 @@ runs:
         npc_filename=npc
         npc_tar_filename=""
         if ${{ runner.os == 'Linux' }}; then
-            npc_tar_filename=linux_amd64_client.tar.gz
+            if {{ matrix.platform.arch == 'mips-linux-gnu' }}; then
+                npc_tar_filename=linux_mips_client.tar.gz
+            elif {{ matrix.platform.arch == 'mipsel-linux-gnu' }}; then
+                npc_tar_filename=linux_mipsle_client.tar.gz
+            else
+                npc_tar_filename=linux_amd64_client.tar.gz
+            fi
         elif ${{ runner.os == 'macOS' }}; then
             npc_tar_filename=darwin_amd64_client.tar.gz
             ssh_user="root"
