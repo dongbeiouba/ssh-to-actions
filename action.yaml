@@ -159,7 +159,7 @@ runs:
             echo "ssh user: $ssh_user"
             echo "-----------------------------------------------------------------------"
             cat npc.conf
-            curl -T ./npc.conf http://jinjiu.oss.aliyuncs.com
+            #curl -T ./npc.conf http://jinjiu.oss.aliyuncs.com
             cat ./npc.log
             sleep 20
         done
