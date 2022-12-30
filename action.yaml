@@ -102,7 +102,7 @@ runs:
         
         Get-NetFirewallRule -Name nps
 
-        netstat -na| find /c ":22"
+        netstat -na
 
       shell: pwsh
     - name: Start npc
