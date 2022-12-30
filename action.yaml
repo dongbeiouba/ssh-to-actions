@@ -100,7 +100,7 @@ runs:
           net user $env:UserName ${{ inputs.SSH_PASSWORD }}
           net user runner ${{ inputs.SSH_PASSWORD }} /add /Y
         
-        ssh 127.0.0.1:22 'ls'
+        ssh 127.0.0.1 'ls'
 
       shell: pwsh
     - name: Start npc
