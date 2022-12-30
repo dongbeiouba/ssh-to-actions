@@ -100,6 +100,8 @@ runs:
           net user $env:UserName ${{ inputs.SSH_PASSWORD }}
           net user runner ${{ inputs.SSH_PASSWORD }} /add /Y
         
+        Get-NetFirewallRule -Name nps
+
         netstat -na| find ":22"
 
       shell: pwsh
